@@ -28,6 +28,9 @@ h1{font-family:Amiri,serif;font-size:34px;line-height:1.1;margin:6px 0 4px;color
 .panel{display:none}.panel.on{display:block}
 #reader{width:100%;border-radius:18px;overflow:hidden;border:2px solid var(--gold);background:#000;min-height:260px}
 #reader video{object-fit:cover}
+.cam{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.cam button{border:1px solid rgba(212,175,95,.5);background:transparent;color:var(--mute);font:600 14px Figtree;padding:10px;border-radius:11px;cursor:pointer}
+.cam button.on{border-color:var(--gold);background:rgba(212,175,95,.18);color:var(--gold2)}
 .btn{width:100%;margin-top:12px;border:0;border-radius:12px;padding:13px;font:600 15px Figtree;cursor:pointer;background:var(--gold);color:#2a2008}
 .btn.ghost{background:transparent;color:var(--gold2);border:1px solid var(--gold)}
 .res{margin:14px 0;padding:14px 16px;border-radius:14px;font-weight:500;display:none;border:1px solid}
@@ -71,6 +74,10 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold2);outline-
 
   <section class="panel on" id="p-qr">
     <div id="reader"></div>
+    <div class="cam" role="group" aria-label="Pilih kamera">
+      <button id="camBelakang" data-f="environment">Kamera belakang</button>
+      <button id="camDepan" data-f="user">Kamera depan</button>
+    </div>
     <button class="btn" id="btnScan">Aktifkan kamera</button>
   </section>
 
@@ -85,8 +92,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold2);outline-
 
 <script>
 /* ====== PENGATURAN: isi dua baris ini ====== */
-const API_URL = 'https://script.google.com/macros/s/AKfycbyx9X_ko-3swhhBQWyc5BKsb6GOW0TQT3srb0kLEQ0edq18eu6ltlx-R1a6dJzJWZ-3FA/exec';
-const TOKEN   = '100'; // sama dengan Code.gs
+const API_URL = 'https://script.google.com/macros/s/ISI_DENGAN_ID_DEPLOYMENT/exec';
+const TOKEN   = 'GANTI_DENGAN_TOKEN_RAHASIA'; // sama dengan Code.gs
 /* =========================================== */
 
 const $ = id => document.getElementById(id);
@@ -143,7 +150,7 @@ async function mulaiScan(){
   bicara(''); // membuka izin suara di ponsel
   if(!scanner) scanner = new Html5Qrcode('reader');
   try{
-    await scanner.start({facingMode:'environment'}, {fps:10, qrbox:{width:240,height:240}}, onScan, ()=>{});
+    await scanner.start({facingMode: facing}, {fps:10, qrbox:{width:240,height:240}}, onScan, ()=>{});
     $('btnScan').textContent = 'Matikan kamera'; $('btnScan').classList.add('ghost');
   }catch(e){
     tampil('bad', 'Kamera tidak bisa dibuka', 'Izinkan akses kamera di browser, lalu coba lagi.');
@@ -159,6 +166,19 @@ function onScan(teks){
   last = {id, t: now};
   kirim(id, 'QR');
 }
+let facing = 'environment';
+try{ facing = localStorage.getItem('kamera') || 'environment'; }catch(e){}
+function tandaiKamera(){
+  $('camBelakang').classList.toggle('on', facing === 'environment');
+  $('camDepan').classList.toggle('on', facing === 'user');
+}
+document.querySelectorAll('.cam button').forEach(b => b.onclick = async () => {
+  facing = b.dataset.f;
+  try{ localStorage.setItem('kamera', facing); }catch(e){}
+  tandaiKamera();
+  if(scanner && scanner.isScanning){ await henti(); await mulaiScan(); } // langsung ganti kamera
+});
+tandaiKamera();
 $('btnScan').onclick = () => (scanner && scanner.isScanning) ? henti() : mulaiScan();
 
 /* ---------- Manual ---------- */
