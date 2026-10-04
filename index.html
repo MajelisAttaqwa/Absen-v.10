@@ -22,12 +22,26 @@ h1{font-family:Amiri,serif;font-size:34px;line-height:1.1;margin:6px 0 4px;color
 .live{display:flex;align-items:center;gap:7px}.dot{width:9px;height:9px;border-radius:50%;background:var(--ok);animation:p 2s infinite}
 .dot.off{background:var(--bad);animation:none}@keyframes p{50%{opacity:.35}}
 .count b{color:var(--gold2);font-size:17px}
-.tabs{display:grid;grid-template-columns:1fr 1fr;background:rgba(0,0,0,.25);border-radius:14px;padding:4px;margin-bottom:14px}
+.rk-bar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.rk-bar input,.rk-bar select{padding:12px;border-radius:12px;border:1px solid rgba(212,175,95,.5);background:rgba(0,0,0,.25);color:var(--ink);font:15px Figtree;color-scheme:dark}
+.rk-info{color:var(--mute);font-size:13.5px;margin:2px 2px 10px}
+.rk{background:var(--em2);border-radius:12px;padding:11px 14px;cursor:pointer}
+.rk-top{display:flex;justify-content:space-between;gap:10px}
+.rk-top small{color:var(--mute);display:block;font-size:12px}
+.rk-pct{font-weight:600;color:var(--gold2)}
+.rk-track{height:6px;border-radius:4px;background:rgba(0,0,0,.3);margin-top:8px;overflow:hidden}
+.rk-fill{height:100%;background:var(--gold)}
+.rk-tgl{display:none;margin-top:9px;font-size:12.5px;color:var(--mute);line-height:1.6}
+.rk.open .rk-tgl{display:block}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);background:rgba(0,0,0,.25);border-radius:14px;padding:4px;margin-bottom:14px}
 .tabs button{border:0;background:none;color:var(--mute);font:600 15px Figtree;padding:11px;border-radius:11px;cursor:pointer}
 .tabs button.on{background:var(--gold);color:#2a2008}
 .panel{display:none}.panel.on{display:block}
 #reader{width:100%;border-radius:18px;overflow:hidden;border:2px solid var(--gold);background:#000;min-height:260px}
 #reader video{object-fit:cover}
+.cam{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.cam button{border:1px solid rgba(212,175,95,.5);background:transparent;color:var(--mute);font:600 14px Figtree;padding:10px;border-radius:11px;cursor:pointer}
+.cam button.on{border-color:var(--gold);background:rgba(212,175,95,.18);color:var(--gold2)}
 .btn{width:100%;margin-top:12px;border:0;border-radius:12px;padding:13px;font:600 15px Figtree;cursor:pointer;background:var(--gold);color:#2a2008}
 .btn.ghost{background:transparent;color:var(--gold2);border:1px solid var(--gold)}
 .res{margin:14px 0;padding:14px 16px;border-radius:14px;font-weight:500;display:none;border:1px solid}
@@ -65,12 +79,17 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold2);outline-
   <div class="tabs" role="tablist">
     <button class="on" data-t="qr">Pindai QR</button>
     <button data-t="manual">Absen Manual</button>
+    <button data-t="rekap">Rekap</button>
   </div>
 
   <div class="res" id="res" role="status" aria-live="polite"></div>
 
   <section class="panel on" id="p-qr">
     <div id="reader"></div>
+    <div class="cam" role="group" aria-label="Pilih kamera">
+      <button id="camBelakang" data-f="environment">Kamera belakang</button>
+      <button id="camDepan" data-f="user">Kamera depan</button>
+    </div>
     <button class="btn" id="btnScan">Aktifkan kamera</button>
   </section>
 
@@ -79,14 +98,23 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold2);outline-
     <div class="list" id="listSantri"></div>
   </section>
 
+  <section class="panel" id="p-rekap">
+    <div class="rk-bar">
+      <input type="month" id="rkBulan" aria-label="Bulan">
+      <select id="rkKel" aria-label="Kelompok"><option value="">Semua kelompok</option></select>
+    </div>
+    <div class="rk-info" id="rkInfo"></div>
+    <div class="list" id="rkList"></div>
+  </section>
+
   <h2>Hadir hari ini</h2>
   <div class="list hadir" id="hadir"><div class="empty">Belum ada yang absen.</div></div>
 </div>
 
 <script>
 /* ====== PENGATURAN: isi dua baris ini ====== */
-const API_URL = 'https://script.google.com/macros/s/AKfycbyx9X_ko-3swhhBQWyc5BKsb6GOW0TQT3srb0kLEQ0edq18eu6ltlx-R1a6dJzJWZ-3FA/exec';
-const TOKEN   = '100'; // sama dengan Code.gs
+const API_URL = 'https://script.google.com/macros/s/ISI_DENGAN_ID_DEPLOYMENT/exec';
+const TOKEN   = 'GANTI_DENGAN_TOKEN_RAHASIA'; // sama dengan Code.gs
 /* =========================================== */
 
 const $ = id => document.getElementById(id);
@@ -143,7 +171,7 @@ async function mulaiScan(){
   bicara(''); // membuka izin suara di ponsel
   if(!scanner) scanner = new Html5Qrcode('reader');
   try{
-    await scanner.start({facingMode:'environment'}, {fps:10, qrbox:{width:240,height:240}}, onScan, ()=>{});
+    await scanner.start({facingMode: facing}, {fps:10, qrbox:{width:240,height:240}}, onScan, ()=>{});
     $('btnScan').textContent = 'Matikan kamera'; $('btnScan').classList.add('ghost');
   }catch(e){
     tampil('bad', 'Kamera tidak bisa dibuka', 'Izinkan akses kamera di browser, lalu coba lagi.');
@@ -159,6 +187,19 @@ function onScan(teks){
   last = {id, t: now};
   kirim(id, 'QR');
 }
+let facing = 'environment';
+try{ facing = localStorage.getItem('kamera') || 'environment'; }catch(e){}
+function tandaiKamera(){
+  $('camBelakang').classList.toggle('on', facing === 'environment');
+  $('camDepan').classList.toggle('on', facing === 'user');
+}
+document.querySelectorAll('.cam button').forEach(b => b.onclick = async () => {
+  facing = b.dataset.f;
+  try{ localStorage.setItem('kamera', facing); }catch(e){}
+  tandaiKamera();
+  if(scanner && scanner.isScanning){ await henti(); await mulaiScan(); } // langsung ganti kamera
+});
+tandaiKamera();
 $('btnScan').onclick = () => (scanner && scanner.isScanning) ? henti() : mulaiScan();
 
 /* ---------- Manual ---------- */
@@ -209,11 +250,53 @@ async function init(){
   setInterval(() => { if(!document.hidden) muatHadir(); }, 5000);
 }
 
+/* ---------- Rekap ---------- */
+let rekapData = [], rkHari = 0;
+async function muatRekap(){
+  const bulan = $('rkBulan').value;
+  $('rkInfo').textContent = 'Memuat rekap…';
+  try{
+    const r = await api({action:'rekap', bulan});
+    if(!r.ok) throw new Error(r.pesan);
+    rekapData = r.data;
+    rkHari = r.hariPertemuan;
+    const kel = [...new Set(r.data.map(x => x.kelompok).filter(Boolean))];
+    const pilih = $('rkKel').value;
+    $('rkKel').innerHTML = '<option value="">Semua kelompok</option>' + kel.map(k => '<option></option>').join('');
+    [...$('rkKel').options].slice(1).forEach((o,i) => { o.value = o.textContent = kel[i]; });
+    $('rkKel').value = pilih;
+    renderRekap();
+  }catch(e){ $('rkInfo').textContent = 'Rekap gagal dimuat. Periksa koneksi.'; }
+}
+function renderRekap(){
+  const k = $('rkKel').value, box = $('rkList'); box.innerHTML = '';
+  const data = rekapData.filter(x => !k || x.kelompok === k);
+  const rata = data.length ? Math.round(data.reduce((a, x) => a + x.persen, 0) / data.length) : 0;
+  $('rkInfo').textContent = rkHari + ' hari pertemuan · rata-rata kehadiran ' + rata + '%';
+  if(!data.length){ box.innerHTML = '<div class="empty">Tidak ada data.</div>'; return; }
+  data.forEach(x => {
+    const d = document.createElement('div'); d.className = 'rk';
+    d.innerHTML = '<div class="rk-top"><div><span></span><small></small></div><span class="rk-pct"></span></div>' +
+      '<div class="rk-track"><div class="rk-fill"></div></div><div class="rk-tgl"></div>';
+    d.querySelector('span').textContent = x.nama;
+    d.querySelector('small').textContent = x.hadir + ' hari hadir' + (x.kelompok ? ' · ' + x.kelompok : '');
+    d.querySelector('.rk-pct').textContent = x.persen + '%';
+    d.querySelector('.rk-fill').style.width = x.persen + '%';
+    d.querySelector('.rk-tgl').textContent = x.tanggal.length ? 'Tanggal hadir: ' + x.tanggal.map(t => +t.slice(8)).join(', ') : 'Belum ada kehadiran.';
+    d.onclick = () => d.classList.toggle('open');
+    box.appendChild(d);
+  });
+}
+$('rkBulan').value = new Date().toLocaleDateString('sv-SE', {timeZone:'Asia/Jakarta'}).slice(0,7);
+$('rkBulan').onchange = muatRekap;
+$('rkKel').onchange = renderRekap;
+
 /* ---------- Tab ---------- */
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tabs button,.panel').forEach(x => x.classList.remove('on'));
   b.classList.add('on'); $('p-' + b.dataset.t).classList.add('on');
   if(b.dataset.t !== 'qr') henti();
+  if(b.dataset.t === 'rekap') muatRekap();
 });
 speechSynthesis && speechSynthesis.getVoices();
 init();
