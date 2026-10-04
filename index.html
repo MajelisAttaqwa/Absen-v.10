@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0c3b2e">
+<title>Absensi Digital — Majelis Ta'lim Wal Mudzakarah</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root{--em:#0c3b2e;--em2:#14523f;--gold:#d4af5f;--gold2:#f0d9a0;--ink:#f4efe0;--mute:#9fb8ab;--ok:#4ade80;--bad:#f87171}
+*{box-sizing:border-box;margin:0}
+body{font-family:Figtree,system-ui,sans-serif;background:var(--em);color:var(--ink);min-height:100vh;
+background-image:radial-gradient(circle at 1px 1px,rgba(212,175,95,.12) 1px,transparent 0);background-size:22px 22px}
+.wrap{max-width:520px;margin:0 auto;padding:20px 16px 40px}
+header{text-align:center;padding:12px 0 18px;border-bottom:1px solid rgba(212,175,95,.35)}
+.bism{font-family:Amiri,serif;font-size:22px;color:var(--gold)}
+h1{font-family:Amiri,serif;font-size:34px;line-height:1.1;margin:6px 0 4px;color:var(--gold2)}
+.sub{font-size:14px;color:var(--ink)}.addr{font-size:12.5px;color:var(--mute);margin-top:2px}
+.bar{display:flex;justify-content:space-between;align-items:center;margin:16px 0;font-size:13.5px;color:var(--mute)}
+.live{display:flex;align-items:center;gap:7px}.dot{width:9px;height:9px;border-radius:50%;background:var(--ok);animation:p 2s infinite}
+.dot.off{background:var(--bad);animation:none}@keyframes p{50%{opacity:.35}}
+.count b{color:var(--gold2);font-size:17px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;background:rgba(0,0,0,.25);border-radius:14px;padding:4px;margin-bottom:14px}
+.tabs button{border:0;background:none;color:var(--mute);font:600 15px Figtree;padding:11px;border-radius:11px;cursor:pointer}
+.tabs button.on{background:var(--gold);color:#2a2008}
+.panel{display:none}.panel.on{display:block}
+#reader{width:100%;border-radius:18px;overflow:hidden;border:2px solid var(--gold);background:#000;min-height:260px}
+#reader video{object-fit:cover}
+.btn{width:100%;margin-top:12px;border:0;border-radius:12px;padding:13px;font:600 15px Figtree;cursor:pointer;background:var(--gold);color:#2a2008}
+.btn.ghost{background:transparent;color:var(--gold2);border:1px solid var(--gold)}
+.res{margin:14px 0;padding:14px 16px;border-radius:14px;font-weight:500;display:none;border:1px solid}
+.res.ok{display:block;background:rgba(74,222,128,.12);border-color:var(--ok)}
+.res.bad{display:block;background:rgba(248,113,113,.12);border-color:var(--bad)}
+.res strong{display:block;font-size:18px}
+input[type=search]{width:100%;padding:13px 15px;border-radius:12px;border:1px solid rgba(212,175,95,.5);background:rgba(0,0,0,.25);color:var(--ink);font:16px Figtree;margin-bottom:10px}
+.list{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 14px;background:var(--em2);border-radius:12px}
+.row small{color:var(--mute);display:block;font-size:12px}
+.row button{border:0;background:var(--gold);color:#2a2008;font:600 13.5px Figtree;padding:9px 14px;border-radius:9px;cursor:pointer}
+.row button:disabled{opacity:.5}
+h2{font-family:Amiri,serif;font-size:22px;color:var(--gold2);margin:26px 0 10px}
+.empty{color:var(--mute);font-size:14px;padding:10px 2px}
+.hadir{max-height:340px;overflow:auto}
+.hadir .row{background:rgba(255,255,255,.05)}.hadir .jam{color:var(--gold);font-variant-numeric:tabular-nums;font-size:13px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold2);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.dot{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="bism">بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ</div>
+    <h1>Absensi Digital</h1>
+    <div class="sub">Majelis Ta'lim Wal Mudzakarah</div>
+    <div class="addr">Jl. Taman Muara, Bogor</div>
+  </header>
+
+  <div class="bar">
+    <span class="live"><i class="dot" id="dot"></i><span id="sync">Menyambungkan…</span></span>
+    <span class="count">Hadir <b id="nHadir">0</b> / <span id="nTotal">0</span></span>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="on" data-t="qr">Pindai QR</button>
+    <button data-t="manual">Absen Manual</button>
+  </div>
+
+  <div class="res" id="res" role="status" aria-live="polite"></div>
+
+  <section class="panel on" id="p-qr">
+    <div id="reader"></div>
+    <button class="btn" id="btnScan">Aktifkan kamera</button>
+  </section>
+
+  <section class="panel" id="p-manual">
+    <input type="search" id="cari" placeholder="Cari nama santri…" autocomplete="off">
+    <div class="list" id="listSantri"></div>
+  </section>
+
+  <h2>Hadir hari ini</h2>
+  <div class="list hadir" id="hadir"><div class="empty">Belum ada yang absen.</div></div>
+</div>
+
+<script>
+/* ====== PENGATURAN: isi dua baris ini ====== */
+const API_URL = 'https://script.google.com/macros/s/ISI_DENGAN_ID_DEPLOYMENT/exec';
+const TOKEN   = 'GANTI_DENGAN_TOKEN_RAHASIA'; // sama dengan Code.gs
+/* =========================================== */
+
+const $ = id => document.getElementById(id);
+let santri = [], hadirIds = new Set(), scanner = null, busy = false, last = {id:'', t:0};
+
+async function api(params){
+  const q = new URLSearchParams({token: TOKEN, ...params});
+  const r = await fetch(API_URL + '?' + q);
+  return r.json();
+}
+
+/* ---------- Suara ---------- */
+function bicara(teks){
+  if(!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(teks);
+  u.lang = 'id-ID'; u.rate = .95;
+  const v = speechSynthesis.getVoices().find(v => v.lang.startsWith('id'));
+  if(v) u.voice = v;
+  speechSynthesis.speak(u);
+}
+
+/* ---------- Kirim absen ---------- */
+async function kirim(id, metode){
+  if(busy) return; busy = true;
+  tampil('Mengirim…', '', '');
+  try{
+    const r = await api({action:'absen', id, metode});
+    if(r.ok){
+      tampil('ok', r.nama, 'Absen berhasil · ' + r.jam);
+      bicara(r.nama + ' absen berhasil');
+      hadirIds.add(id);
+    }else{
+      tampil('bad', r.nama || 'Absen gagal', r.pesan);
+      bicara((r.nama ? r.nama + ' ' : '') + 'absen gagal. ' + r.pesan);
+    }
+  }catch(e){
+    tampil('bad', 'Absen gagal', 'Tidak bisa terhubung ke server');
+    bicara('Absen gagal. Periksa koneksi internet');
+  }
+  busy = false;
+  muatHadir(); renderManual();
+}
+function tampil(kelas, judul, ket){
+  const el = $('res');
+  if(kelas === 'Mengirim…'){ return; }
+  el.className = 'res ' + kelas;
+  el.innerHTML = '<strong></strong><span></span>';
+  el.firstChild.textContent = judul; el.lastChild.textContent = ket;
+}
+
+/* ---------- Scanner ---------- */
+async function mulaiScan(){
+  bicara(''); // membuka izin suara di ponsel
+  if(!scanner) scanner = new Html5Qrcode('reader');
+  try{
+    await scanner.start({facingMode:'environment'}, {fps:10, qrbox:{width:240,height:240}}, onScan, ()=>{});
+    $('btnScan').textContent = 'Matikan kamera'; $('btnScan').classList.add('ghost');
+  }catch(e){
+    tampil('bad', 'Kamera tidak bisa dibuka', 'Izinkan akses kamera di browser, lalu coba lagi.');
+  }
+}
+async function henti(){
+  if(scanner && scanner.isScanning){ await scanner.stop(); }
+  $('btnScan').textContent = 'Aktifkan kamera'; $('btnScan').classList.remove('ghost');
+}
+function onScan(teks){
+  const id = teks.trim(), now = Date.now();
+  if(id === last.id && now - last.t < 4000) return; // cegah kirim ganda
+  last = {id, t: now};
+  kirim(id, 'QR');
+}
+$('btnScan').onclick = () => (scanner && scanner.isScanning) ? henti() : mulaiScan();
+
+/* ---------- Manual ---------- */
+function renderManual(){
+  const k = $('cari').value.toLowerCase();
+  const data = santri.filter(s => s.nama.toLowerCase().includes(k)).slice(0, 60);
+  const box = $('listSantri'); box.innerHTML = '';
+  if(!data.length){ box.innerHTML = '<div class="empty">Santri tidak ditemukan.</div>'; return; }
+  data.forEach(s => {
+    const d = document.createElement('div'); d.className = 'row';
+    const sudah = hadirIds.has(s.id);
+    d.innerHTML = '<div><span></span><small></small></div><button></button>';
+    d.querySelector('span').textContent = s.nama;
+    d.querySelector('small').textContent = s.kelompok || s.id;
+    const b = d.querySelector('button'); b.textContent = sudah ? 'Sudah hadir' : 'Absenkan'; b.disabled = sudah;
+    b.onclick = () => kirim(s.id, 'Manual');
+    box.appendChild(d);
+  });
+}
+$('cari').oninput = renderManual;
+
+/* ---------- Sinkron realtime (polling 5 detik) ---------- */
+async function muatHadir(){
+  try{
+    const r = await api({action:'hari_ini'});
+    if(!r.ok) throw new Error(r.pesan);
+    hadirIds = new Set(r.data.map(x => x.id));
+    $('nHadir').textContent = r.data.length; $('nTotal').textContent = r.total;
+    const box = $('hadir'); box.innerHTML = '';
+    if(!r.data.length) box.innerHTML = '<div class="empty">Belum ada yang absen.</div>';
+    r.data.forEach(x => {
+      const d = document.createElement('div'); d.className = 'row';
+      d.innerHTML = '<div><span></span><small></small></div><span class="jam"></span>';
+      d.querySelector('span').textContent = x.nama;
+      d.querySelector('small').textContent = x.metode;
+      d.querySelector('.jam').textContent = x.jam.slice(0,5);
+      box.appendChild(d);
+    });
+    $('dot').className = 'dot'; $('sync').textContent = 'Tersinkron';
+    renderManual();
+  }catch(e){
+    $('dot').className = 'dot off'; $('sync').textContent = 'Terputus';
+  }
+}
+async function init(){
+  try{ const r = await api({action:'santri'}); if(r.ok) santri = r.data; }catch(e){}
+  await muatHadir(); renderManual();
+  setInterval(() => { if(!document.hidden) muatHadir(); }, 5000);
+}
+
+/* ---------- Tab ---------- */
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button,.panel').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); $('p-' + b.dataset.t).classList.add('on');
+  if(b.dataset.t !== 'qr') henti();
+});
+speechSynthesis && speechSynthesis.getVoices();
+init();
+</script>
+</body>
+</html>
